@@ -85,7 +85,7 @@ max_cancor <- function(X,Y){
 #' @param X matrix or dataframe, a set of explanatory variables.
 #' @param Y matrix or dataframe, a set of response variables.
 #' @param num_permutations numeric, the number of permutations to perform. Default is 1000.
-#' @return density object representing the null distribution of permuted canonical correlations.
+#' @return Vector representing the null distribution of permuted canonical correlations.
 #' @examples 
 #' # Example with random data
 #' set.seed(1)
@@ -99,10 +99,9 @@ null_dist_CCA <- function(X, Y, num_permutations = 1000) {
     perm_Y <- Y[sample(nrow(Y)), ]
     null_dist[i] <- max(stats::cancor(X, perm_Y)$cor)
   }
-  null_density <- plot(density(null_dist), main = "Null Distribution for CCA",
-                       xlab = " Permuted Canonical Correlation")
   
-  return(null_density)
+  
+  return(null_dist)
 }
 
 
@@ -197,7 +196,7 @@ RSA <- function(X,Y){
 #' @param X matrix or dataframe, a set of explanatory variables.
 #' @param Y matrix or dataframe, a set of response variables.
 #' @param num_permutations numeric, the number of permutations to perform. Default is 1000.
-#' @return density plot representing the null distribution of permuted distance correlations.
+#' @return Vector representing the null distribution of permuted distance correlations.
 #' @examples 
 #' # Example with random data
 #' set.seed(1)
@@ -215,9 +214,7 @@ null.dist_RSA <- function(X, Y, num_permutations = 1000) {
     null_dist[i] <- abs(cor(dist_x, dist_y))
   }
   
-  null_density <- plot(density(null_dist), main = "Null Distribution for RSA",
-                       xlab = " Permuted Distance Correlation")
-  return(null_density)
+  return(null_dist)
 }
 
 #' @title Adjusted Representational Similarity Analysis (RSA)

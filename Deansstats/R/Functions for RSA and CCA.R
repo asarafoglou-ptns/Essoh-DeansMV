@@ -52,6 +52,40 @@ simulate_multivariate_data <- function(n, means, diag_cor, within_cor, between_c
 }
 
 
+#' @title Simulate Heterogeneous Data
+#' @description
+#' The function creates multivariate data consisting of heterogeneous subsets.
+#' @param n numeric, a single number specifying the sample size.
+#' @param means numeric, a vector specifying the means for each variable.
+#' @param cor_values numeric, a vector specifying the unique values in the lower
+#' triangle of the correlation matrix, excluding the diagonal
+#' @return A matrix containing the multivariate dataset
+#' @examples 
+#' # Create a matrix with 4 variables and 100 subjects
+#'n <- 100
+#'means <- rep(0, 4)
+#'cor_values <- c(0.1, 0.2, 0.3, 0.4, 0.5, 0.6)
+#'my_data <- simulate_multivariate_data(n, means, cor_values)
+#' @export
+simulate_heterogeneous_data <- function(n, means, cor_values) {
+  set.seed(1)
+  p <- length(means)
+  
+  # Construct correlation matrix
+  cor_matrix <- diag(p)
+  cor_matrix[lower.tri(cor_matrix)] <- cor_values
+  cor_matrix[upper.tri(cor_matrix)] <- t(cor_matrix)[upper.tri(cor_matrix)]
+  cor_matrix <- nearPD(cor_matrix)$mat  # Ensure positive definite
+  
+  # Generate correlated data
+  simulated_data <- mvrnorm(n = n, mu = means, Sigma = cor_matrix, empirical = TRUE)
+  
+  return(simulated_data)
+}
+
+
+
+
 
 
 #' @title Maximum Canonical Correlation

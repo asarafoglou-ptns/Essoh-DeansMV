@@ -1,6 +1,6 @@
 Package: Deansstats
 Title: Multivariate data analysis and simulation
-Version: 1.2
+Version: 2.1
 Authors@R: 
     person("Dean", "Essoh", , "first.last@example.com", role = c("aut", "cre"),
            comment = c(ORCID = "YOUR-ORCID-ID"))

@@ -1,10 +1,3 @@
-library(shiny)
-library(Matrix)
-library(MASS)
-library(ggplot2)
-
-
-# Define UI
 ui <- fluidPage(
   tags$style(type="text/css", "
     .app-description {
@@ -52,13 +45,9 @@ ui <- fluidPage(
         tabPanel("What is Simuflex?",
                  div(class = "app-description", htmlOutput("app_description"))
         ),
-        tabPanel("Simulated Data",
-                 verbatimTextOutput("output_simulate"),
-                 plotOutput("plot_simulate")
-        ),
-        tabPanel("Uploaded Data",
-                 verbatimTextOutput("output_uploaded_mv1"),
-                 verbatimTextOutput("output_uploaded_mv2")
+        tabPanel("Data",
+                 verbatimTextOutput("output_data"),
+                 plotOutput("plot_data")
         ),
         tabPanel("RSA Results",
                  verbatimTextOutput("output_rsa"),
@@ -98,28 +87,29 @@ server <- function(input, output) {
       round(x, 3)
     })
     
-    values$display_simulated_data <- list(MV1 = head(rounded_data$MV1), MV2 = head(rounded_data$MV2))
+    values$display_data <- list(MV1 = head(rounded_data$MV1), MV2 = head(rounded_data$MV2))
   })
   
   observeEvent(input$file1, {
     req(input$file1)
     values$data$MV1 <- read.csv(input$file1$datapath)
-    values$display_uploaded_mv1 <- head(values$data$MV1)
+    values$display_data <- list(MV1 = head(values$data$MV1), MV2 = values$display_data$MV2)
   })
   
   observeEvent(input$file2, {
     req(input$file2)
     values$data$MV2 <- read.csv(input$file2$datapath)
-    values$display_uploaded_mv2 <- head(values$data$MV2)
+    values$display_data <- list(MV1 = values$display_data$MV1, MV2 = head(values$data$MV2))
   })
   
-  output$output_simulate <- renderPrint({
-    if (!is.null(values$display_simulated_data)) {
-      values$display_simulated_data
+  output$output_data <- renderPrint({
+    if (!is.null(values$display_data)) {
+      values$display_data
     } else {
-      "No simulated data available"
+      "No data available"
     }
   })
+  
   observe({
     if (!is.null(values$data$MV1)) {
       output$output_uploaded_mv1 <- renderPrint({
@@ -128,7 +118,6 @@ server <- function(input, output) {
     }
   })
   
-  # Render uploaded MV2 data
   observe({
     if (!is.null(values$data$MV2)) {
       output$output_uploaded_mv2 <- renderPrint({
@@ -143,11 +132,8 @@ server <- function(input, output) {
     output$output_perm_test_rsa <- renderPrint(NULL)
     output$output_max_cancor <- renderPrint(NULL)
     output$output_perm_test_cca <- renderPrint(NULL)
-    
-    # Reset uploaded data display
-    output$output_uploaded_mv1 <- renderPrint(NULL)
-    output$output_uploaded_mv2 <- renderPrint(NULL)
   })
+  
   
   observeEvent(input$rsa, {
     req(values$data$MV1, values$data$MV2)

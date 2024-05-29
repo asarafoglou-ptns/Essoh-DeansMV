@@ -1,8 +1,6 @@
-# Necessary libraries
-
+library(shiny)
 library(Matrix)
 library(MASS)
-library(shiny)
 library(ggplot2)
 
 
@@ -122,22 +120,23 @@ server <- function(input, output) {
       "No simulated data available"
     }
   })
-  
-  output$output_uploaded_mv1 <- renderPrint({
-    if (!is.null(values$display_uploaded_mv1)) {
-      values$display_uploaded_mv1
-    } else {
-      "No uploaded MV1 data available"
+  observe({
+    if (!is.null(values$data$MV1)) {
+      output$output_uploaded_mv1 <- renderPrint({
+        head(values$data$MV1)
+      })
     }
   })
   
-  output$output_uploaded_mv2 <- renderPrint({
-    if (!is.null(values$display_uploaded_mv2)) {
-      values$display_uploaded_mv2
-    } else {
-      "No uploaded MV2 data available"
+  # Render uploaded MV2 data
+  observe({
+    if (!is.null(values$data$MV2)) {
+      output$output_uploaded_mv2 <- renderPrint({
+        head(values$data$MV2)
+      })
     }
   })
+  
   observeEvent(list(input$simulate, input$file1, input$file2), {
     # Reset RSA and CCA outputs
     output$output_rsa <- renderPrint(NULL)

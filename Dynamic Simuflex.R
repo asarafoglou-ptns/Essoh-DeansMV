@@ -1,3 +1,8 @@
+library(Matrix)
+library(MASS)
+library(shiny)
+library(ggplot2)
+
 
 # Define UI
 ui <- fluidPage(

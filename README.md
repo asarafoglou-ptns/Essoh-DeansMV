@@ -1,1 +1,1 @@
-This is my rpackage
+This is my rpackage.

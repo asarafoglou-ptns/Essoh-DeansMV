@@ -2,7 +2,7 @@ library(Deansstats)
 library(MASS)
 library(Matrix)
 library(ggplot2)
-
+library(shiny)
 ui <- fluidPage(
   tags$style(type="text/css", "
     .app-description {

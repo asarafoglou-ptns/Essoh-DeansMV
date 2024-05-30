@@ -1,0 +1,295 @@
+library(Deansstats)
+library(MASS)
+library(Matrix)
+library(ggplot2)
+library(shiny)
+
+ui <- navbarPage(
+  title = "MultiData",
+  tabPanel(
+    "Home",
+    fluidRow(
+      column(12,
+             div(
+               class = "jumbotron text-center",
+               h1("Welcome to MultiData!"),
+               p("An app to facilitate the analysis of multivariate data using Representational Similarity Analysis (RSA) and Canonical Correlation Analysis (CCA).")
+             )
+      )
+    )
+  ),
+  tabPanel(
+    "About MultiData",
+    fluidRow(
+      column(12,
+             div(
+               class = "app-description",
+               style = "font-size: 18px;",
+               htmlOutput("app_description")
+             )
+      )
+    )
+  ),
+  tabPanel(
+    "RSA & CCA Explained",
+    fluidRow(
+      column(12,
+             div(
+               class = "rsa-description",
+               style = "font-size: 18px;",
+               htmlOutput("rsa_description")
+             )
+      )
+    )
+  ),
+  tabPanel(
+    "Simulate/Upload Data",
+    sidebarLayout(
+      sidebarPanel(
+        h3("Simulate Data"),
+        numericInput("n", "Sample Size", value = 100, min = 1),
+        textInput("means", "Means (comma separated)", value = "0,0,0,0"),
+        numericInput("diag_cor", "Diagonal Correlation", value = 1),
+        numericInput("within_cor", "Within Correlation", value = 0.1),
+        numericInput("between_cor", "Between Correlation", value = 0.2),
+        numericInput("column", "Number of Variables in MV1", value = 2, min = 1),
+        actionButton("simulate", "Simulate Data", class = "btn-primary"),
+        hr(),
+        h3("Upload Data"),
+        fileInput("file1", "Upload MV1 data (CSV format)"),
+        fileInput("file2", "Upload MV2 data (CSV format)")
+      ),
+      mainPanel(
+        verbatimTextOutput("output_data"),
+        verbatimTextOutput("output_uploaded_mv1"),
+        verbatimTextOutput("output_uploaded_mv2"),
+        plotOutput("plot_data")
+      )
+    )
+  ),
+  tabPanel(
+    "RSA Functions",
+    sidebarLayout(
+      sidebarPanel(
+        actionButton("rsa", "Compute Distance Matrix Correlation", class = "btn-primary"),
+        numericInput("num_permutations_rsa", "Number of Permutations for RSA", value = 1000, min = 1),
+        actionButton("null.dist_RSA", "Generate Permuted Null Distribution", class = "btn-info"),
+        actionButton("adjust_rsa", "Adjust Distance Matrix Correlation", class = "btn-warning"),
+        actionButton("perm_test_rsa", "Compute P-value", class = "btn-success")
+      ),
+      mainPanel(
+        verbatimTextOutput("output_rsa"),
+        plotOutput("plot_rsa"),
+        verbatimTextOutput("output_adjust_rsa"),
+        verbatimTextOutput("output_perm_test_rsa")
+      )
+    )
+  ),
+  tabPanel(
+    "CCA Functions",
+    sidebarLayout(
+      sidebarPanel(
+        actionButton("max_cancor", "Compute Highest Canonical Correlation", class = "btn-primary"),
+        numericInput("num_permutations_cca", "Number of Permutations for CCA", value = 1000, min = 1),
+        actionButton("null_dist_cca", "Generate Permuted Null Distribution (CCA)", class = "btn-info"),
+        actionButton("adjust_cca", "Adjust Canonical Correlation", class = "btn-warning"),
+        actionButton("perm_test_cca", "Compute P-value", class = "btn-success")
+      ),
+      mainPanel(
+        verbatimTextOutput("output_max_cancor"),
+        plotOutput("plot_cca"),
+        verbatimTextOutput("output_adjust_cca"),
+        verbatimTextOutput("output_perm_test_cca")
+      )
+    )
+  )
+)
+
+
+# Define Server
+server <- function(input, output) {
+  values <- reactiveValues(data = list(MV1 = NULL, MV2 = NULL))
+  
+  observeEvent(input$simulate, {
+    n <- input$n
+    means <- as.numeric(unlist(strsplit(input$means, ",")))
+    diag_cor <- input$diag_cor
+    within_cor <- input$within_cor
+    between_cor <- input$between_cor
+    column <- input$column
+    
+    # Generate and round the multivariate data
+    simulated_data <- simulate_multivariate_data(n, means, diag_cor, within_cor, between_cor, column)
+    values$data <- simulated_data
+    
+    # Round the data points before displaying
+    rounded_data <- lapply(simulated_data, function(x) {
+      round(x, 3)
+    })
+    
+    output$output_data <- renderPrint({
+      if (!is.null(rounded_data$MV1) && !is.null(rounded_data$MV2)) {
+        list(MV1 = head(rounded_data$MV1), MV2 = head(rounded_data$MV2))
+      } else if (!is.null(rounded_data$MV1)) {
+        list(MV1 = head(rounded_data$MV1))
+      } else if (!is.null(rounded_data$MV2)) {
+        list(MV2 = head(rounded_data$MV2))
+      } else {
+        "No data available"
+      }
+    })
+  })
+  
+  observeEvent(input$file1, {
+    req(input$file1)
+    values$data$MV1 <- read.csv(input$file1$datapath)
+    output$output_data <- renderPrint({
+      if (!is.null(values$data$MV1) && !is.null(values$data$MV2)) {
+        list(MV1 = head(values$data$MV1), MV2 = head(values$data$MV2))
+      } else if (!is.null(values$data$MV1)) {
+        list(MV1 = head(values$data$MV1))
+      } else if (!is.null(values$data$MV2)) {
+        list(MV2 = head(values$data$MV2))
+      } else {
+        "No data available"
+      }
+    })
+  })
+  
+  observeEvent(input$file2, {
+    req(input$file2)
+    values$data$MV2 <- read.csv(input$file2$datapath)
+    output$output_data <- renderPrint({
+      if (!is.null(values$data$MV1) && !is.null(values$data$MV2)) {
+        list(MV1 = head(values$data$MV1), MV2 = head(values$data$MV2))
+      } else if (!is.null(values$data$MV1)) {
+        list(MV1 = head(values$data$MV1))
+      } else if (!is.null(values$data$MV2)) {
+        list(MV2 = head(values$data$MV2))
+      } else {
+        "No data available"
+      }
+    })
+  })
+  
+  # Reset RSA and CCA outputs when data changes
+  observeEvent(list(input$simulate, input$file1, input$file2), {
+    output$output_rsa <- renderPrint(NULL)
+    output$output_perm_test_rsa <- renderPrint(NULL)
+    output$output_max_cancor <- renderPrint(NULL)
+    output$output_perm_test_cca <- renderPrint(NULL)
+  })
+  
+  
+  
+  observeEvent(input$rsa, {
+    req(values$data$MV1, values$data$MV2)
+    output$output_rsa <- renderPrint({
+      result <- round(RSA(values$data$MV1, values$data$MV2), 3)
+      paste("Distance Matrix Correlation:", result)
+    })
+  })
+  
+  observeEvent(input$null.dist_RSA, {
+    req(values$data$MV1, values$data$MV2)
+    num_permutations <- input$num_permutations_rsa
+    permuted_values <- null.dist_RSA(values$data$MV1, values$data$MV2, num_permutations)
+    output$plot_rsa <- renderPlot({
+      ggplot(data.frame(round(permuted_values, 3)), aes(x = round(permuted_values, 3))) +
+        geom_density(fill = "blue", alpha = 0.5) +
+        labs(title = "Null Distribution for RSA", x = "Permuted Distance Matrix Correlation", y = "Density")
+    })
+  })
+  
+  observeEvent(input$adjust_rsa, {
+    req(values$data$MV1, values$data$MV2)
+    observed <- round(RSA(values$data$MV1, values$data$MV2), 3)
+    output$output_adjust_rsa <- renderPrint({
+      result <- round(adjust_RSA(values$data$MV1, values$data$MV2, num_permutations = 1000, observed = observed), 3)
+      paste("Adjusted Distance Matrix Correlation:", result)
+    })
+  })
+  
+  observeEvent(input$perm_test_rsa, {
+    req(values$data$MV1, values$data$MV2)
+    observed <- round(adjust_RSA(values$data$MV1, values$data$MV2, num_permutations = 1000, observed = RSA(values$data$MV1, values$data$MV2)), 3)
+    output$output_perm_test_rsa <- renderPrint({
+      result <- round(Perm_test_RSA(values$data$MV1, values$data$MV2, num_permutations = 1000, observed = observed), 3)
+      paste("P-value for Adjusted Distance Matrix Correlation:", result)
+    })
+  })
+  
+  observeEvent(input$max_cancor, {
+    req(values$data$MV1, values$data$MV2)
+    output$output_max_cancor <- renderPrint({
+      result <- round(max_cancor(values$data$MV1, values$data$MV2), 3)
+      paste("Highest Canonical Correlation:", result)
+    })
+  })
+  
+  observeEvent(input$null_dist_cca, {
+    req(values$data$MV1, values$data$MV2)
+    num_permutations <- input$num_permutations_cca
+    permuted_values <- null_dist_CCA(values$data$MV1, values$data$MV2, num_permutations)
+    output$plot_cca <- renderPlot({
+      ggplot(data.frame(round(permuted_values, 3)), aes(x = round(permuted_values, 3))) +
+        geom_density(fill = "green", alpha = 0.5) +
+        labs(title = "Null Distribution for CCA", x = "Permuted CCA Values", y = "Density")
+    })
+  })
+  
+  observeEvent(input$adjust_cca, {
+    req(values$data$MV1, values$data$MV2)
+    raw_CCA <- round(max_cancor(values$data$MV1, values$data$MV2), 3)
+    output$output_adjust_cca <- renderPrint({
+      result <- round(adjust_CCA(values$data$MV1, values$data$MV2, num_permutations = 1000, raw_CCA = raw_CCA), 3)
+      paste("Adjusted Canonical Correlation:", result)
+    })
+  })
+  
+  observeEvent(input$perm_test_cca, {
+    req(values$data$MV1, values$data$MV2)
+    observed <- round(adjust_CCA(values$data$MV1, values$data$MV2, num_permutations = 1000, raw_CCA = max_cancor(values$data$MV1, values$data$MV2)), 3)
+    output$output_perm_test_cca <- renderPrint({
+      result <- round(Perm_test_CCA(values$data$MV1, values$data$MV2, num_permutations = 1000, observed = observed), 3)
+      paste("P-value for Adjusted Canonical Correlation:", result)
+    })
+  })
+  
+  output$app_description <- renderUI({
+    HTML("
+      <p>Welcome to MultiData!</p>
+      <p>This app was designed to facilitate the analysis of multivariate data using representational similarity analysis (RSA) and canonical correlation analysis (CCA).</p>
+      <p>To provide a comprehensive understanding of its capabilities, let's explore its key features:</p>
+      <ul>
+        <li><strong>Data Simulation:</strong> Simulate multivariate data effortlessly and automatically split it into two separate datasets for subsequent analysis with RSA and CCA.</li>
+        <li><strong>Upload Data:</strong> Upload your own datasets (MV1 and MV2) for analysis.</li>
+        <li><strong>RSA Functions:</strong> Compute the distance matrix correlation between datasets, generate permuted null distributions, adjust effect sizes based on these distributions, and compute p-values.</li>
+        <li><strong>CCA Functions:</strong> Compute the highest canonical correlation, generate permuted null distributions, adjust canonical correlations, and compute p-values.</li>
+      </ul>
+      <p>MultiData addresses a common challenge in multivariate analysis by allowing you to generate permuted null distributions. These distributions are instrumental in adjusting effect sizes and computing accurate p-values, ensuring the reliability of your results.</p>
+      <p>With its emphasis on robustness and reliability, MultiData is an indispensable tool for researchers and students seeking to conduct rigorous multivariate analyses.</p>
+    ")
+  })
+  output$rsa_description <- renderUI({
+    HTML("
+    <p>Let us dive deeper into the techniques supported by MultiData!</p>
+    <p><strong>Representational Similarity Analysis (RSA)</strong></p>
+    <p>Per multivariate outcome, RSA condenses each participant's response profile into one datapoint. It then constructs a distance matrix of the pairwise distance between subjects per multivariate outcome. Then, it computes the correlation between these distance matrices. A high correlation indicates that people with similar response profiles on one multivariate outcome also have similar response profiles on the other multivariate outcome.</p>
+    <p><strong>Canonical Correlation Analysis (CCA)</strong></p>
+    <p>CCA condenses each multivariate outcome into one linear combination of the individual variables. This linear combination is known as a canonical variate and summarizes the scores on each multivariate outcome at the group level. CCA estimates these canonical variates in such a way that maximizes the correlation between them. A high correlation indicates that there is a group-level linear relationship between the multivariate outcomes.</p>
+     <p><strong>Null Distribution and Effect Size adjustment</strong></p>
+     RSA and CCA pose challenges in assessing statistical significance and interpreting effect sizes due to their non-normal distributions. MultiData tackles this by providing permuted null distributions and adjusting effect sizes. The permuted null distribution is generated by shuffling datasets to simulate chance effects. MultiData allows you to set the number 
+     of permutations and thus generate your custom null distribution. Our effect size adjustment is also based on this procedure.
+      It involves subtracting the mean of 1000 permuted effect sizes from the raw effect size. This yields a robust measure of the effect beyond chance.</p>
+  
+  ")
+  })
+  
+    
+
+
+ 
+}
+# Run the application
+shinyApp(ui = ui, server = server)

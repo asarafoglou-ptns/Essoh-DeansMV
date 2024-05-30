@@ -75,10 +75,10 @@ simulate_heterogeneous_data <- function(n, means, cor_values) {
   cor_matrix <- diag(p)
   cor_matrix[lower.tri(cor_matrix)] <- cor_values
   cor_matrix[upper.tri(cor_matrix)] <- t(cor_matrix)[upper.tri(cor_matrix)]
-  cor_matrix <- nearPD(cor_matrix)$mat  # Ensure positive definite
+  cor_matrix <- Matrix::nearPD(cor_matrix)$mat  # Ensure positive definite
   
   # Generate correlated data
-  simulated_data <- mvrnorm(n = n, mu = means, Sigma = cor_matrix, empirical = TRUE)
+  simulated_data <- MASS::mvrnorm(n = n, mu = means, Sigma = cor_matrix, empirical = TRUE)
   
   return(simulated_data)
 }
@@ -105,7 +105,7 @@ simulate_heterogeneous_data <- function(n, means, cor_values) {
 #' print(max_CC)
 #' @export
 max_cancor <- function(X,Y){
-  max_CC <- max(stats::cancor(X,Y)$cor)
+  max_CC <- max(cancor(X,Y)$cor)
   return(max_CC)
 }
 
@@ -131,7 +131,7 @@ null_dist_CCA <- function(X, Y, num_permutations = 1000) {
   null_dist <- numeric(num_permutations)
   for (i in 1:num_permutations) {
     perm_Y <- Y[sample(nrow(Y)), ]
-    null_dist[i] <- max(stats::cancor(X, perm_Y)$cor)
+    null_dist[i] <- max(cancor(X, perm_Y)$cor)
   }
   
   
@@ -155,14 +155,14 @@ null_dist_CCA <- function(X, Y, num_permutations = 1000) {
 #' set.seed(1)
 #' X <- matrix(rnorm(100*3), 100, 3)
 #' Y <- matrix(rnorm(100*2), 100, 2)
-#' raw_CCA <- max(stats::cancor(X, Y)$cor)
+#' raw_CCA <- max(cancor(X, Y)$cor)
 #' adjusted_CCA <- adjust_CCA(X, Y, num_permutations = 500, raw_CCA = raw_CCA)
 #' @export
 adjust_CCA <- function(X, Y, num_permutations = 1000, raw_CCA) {
   perm_CCA <- numeric(num_permutations)
   for (i in 1:num_permutations) {
     perm_Y <- Y[sample(nrow(Y)), ]
-    perm_CCA[i] <- (max(stats::cancor(X, perm_Y)$cor))
+    perm_CCA[i] <- (max(cancor(X, perm_Y)$cor))
   }
   
   mean_CCA <- mean(perm_CCA)
@@ -186,14 +186,14 @@ adjust_CCA <- function(X, Y, num_permutations = 1000, raw_CCA) {
 #' set.seed(1)
 #' X <- matrix(rnorm(100*3), 100, 3)
 #' Y <- matrix(rnorm(100*2), 100, 2)
-#' observed <- max(stats::cancor(X, Y)$cor)
+#' observed <- max(cancor(X, Y)$cor)
 #' p_value <- Perm_test_CCA(X, Y, num_permutations = 500, observed = observed)
 #' @export
 Perm_test_CCA <- function(X, Y, num_permutations = 1000, observed) {
   null_dist <- numeric(num_permutations)
   for (i in 1:num_permutations) {
     perm_Y <- Y[sample(nrow(Y)), ]
-    null_dist[i] <- max(stats::cancor(X, perm_Y)$cor)
+    null_dist[i] <- max(cancor(X, perm_Y)$cor)
   }
   p <- sum(null_dist >= observed) / num_permutations
   return(p)
@@ -215,8 +215,8 @@ Perm_test_CCA <- function(X, Y, num_permutations = 1000, observed) {
 #' rsa_correlation <- RSA(X, Y)
 #' @export
 RSA <- function(X,Y){
-  MV1_dist <- stats::dist(X)
-  MV2_dist <- stats::dist(Y)
+  MV1_dist <- dist(X)
+  MV2_dist <- dist(Y)
   dist_correl <- cor(MV1_dist, MV2_dist)
   return(dist_correl)
 }
@@ -242,8 +242,8 @@ null.dist_RSA <- function(X, Y, num_permutations = 1000) {
   null_dist <- numeric(num_permutations)
   for (i in 1:num_permutations){
     perm_Y <- Y[sample(nrow(Y)), ]  # Permute the outcome variables within each iteration
-    dist_x <- stats::dist(X)
-    dist_y <- stats::dist(perm_Y)
+    dist_x <- dist(X)
+    dist_y <- dist(perm_Y)
     
     null_dist[i] <- abs(cor(dist_x, dist_y))
   }
@@ -272,8 +272,8 @@ adjust_RSA <- function(X, Y, num_permutations = 1000, observed) {
   null_dist <- numeric(num_permutations)
   for (i in 1:num_permutations){
     perm_Y <- Y[sample(nrow(Y)), ]
-    dist_x <- stats::dist(X)
-    dist_y <- stats::dist(perm_Y)
+    dist_x <- dist(X)
+    dist_y <- dist(perm_Y)
     
     null_dist[i] <- abs(cor(dist_x, dist_y))
   }
@@ -303,8 +303,8 @@ Perm_test_RSA <- function(X, Y, num_permutations = 1000, observed) {
   null_dist <- numeric(num_permutations)
   for (i in 1:num_permutations){
     perm_Y <- Y[sample(nrow(Y)), ]  # Permute the outcome variables within each iteration
-    dist_x <- stats::dist(X)
-    dist_y <- stats::dist(perm_Y)
+    dist_x <- dist(X)
+    dist_y <- dist(perm_Y)
     
     null_dist[i] <- abs(cor(dist_x, dist_y))
   }
